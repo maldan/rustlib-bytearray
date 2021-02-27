@@ -4,7 +4,7 @@ macro_rules! test_number {
         paste::item! {
             #[test]
             fn [<write _ $i $j>]() {
-                let mut b = ByteSet::new($j / 8);
+                let mut b = ByteSet::new($j / 8, Endianess::LE);
                 b.[<write _ $i $j>](4);
                 b.position = 0;
                 assert_eq!(b.[<read _ $i $j>](), 4);
@@ -16,6 +16,7 @@ macro_rules! test_number {
 #[cfg(test)]
 mod tests {
     use bytearray::byteset::ByteSet;
+    use bytearray::Endianess;
     use paste;
 
     test_number!(u, 8);

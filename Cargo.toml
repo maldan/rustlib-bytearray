@@ -4,5 +4,5 @@ authors = ["Maldan"]
 edition = "2018"
 version = "0.0.1"
 
-[dev-dependencies]
+[dependencies]
 paste = "0.1"

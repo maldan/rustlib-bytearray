@@ -1,108 +1,195 @@
+use crate::Endianess;
+use std::ops::Add;
 use std::ops::AddAssign;
+
+#[macro_export]
+macro_rules! write_vec {
+    ( $type:ident ) => {
+        paste::item! {
+            #[inline(always)]
+            pub fn [<write_ $type _vec>](&mut self, v: Vec<$type>) {
+                for i in 0..v.len() {
+                    self.[<write_ $type>](v[i]);
+                }
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! read_vec {
+    ( $type:ident ) => {
+        paste::item! {
+            #[inline(always)]
+            pub fn [<read_ $type _vec>](&mut self, len: usize) -> Vec<$type> {
+                let mut s = vec![0 as $type; len];
+                for i in 0..len {
+                    s[i] = self.[<read_ $type>]();
+                }
+                s
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! write_number {
+    ( $type:ident ) => {
+        paste::item! {
+            #[inline(always)]
+            pub fn [<write_ $type>](&mut self, v: $type) {
+                let bytes = match self.endianess {
+                    Endianess::LE => v.to_le_bytes(),
+                    Endianess::BE => v.to_be_bytes(),
+                };
+                for i in 0..bytes.len() {
+                    self.write_u8(bytes[i]);
+                }
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! read_number {
+    ( $type:ident, $( $x:ident ),* ) => {
+        paste::item! {
+            #[inline(always)]
+            pub fn [<read_ $type>](&mut self) -> $type {
+                match self.endianess {
+                    Endianess::LE => $type::from_le_bytes([
+                        $(
+                            self.[<read_ $x>](),
+                        )*
+                    ]),
+                    Endianess::BE => $type::from_be_bytes([
+                        $(
+                            self.[<read_ $x>](),
+                        )*
+                    ]),
+                }
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! add_assign_number {
+    ( $type:ident ) => {
+        paste::item! {
+            impl AddAssign<$type> for ByteSet {
+                #[inline(always)]
+                fn add_assign(&mut self, v: $type) {
+                    self.[<write_ $type>](v);
+                }
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! add_assign_vec {
+    ( $type:ident ) => {
+        paste::item! {
+            impl AddAssign<Vec<$type>> for ByteSet {
+                #[inline(always)]
+                fn add_assign(&mut self, v: Vec<$type>) {
+                    self.[<write_ $type _vec>](v);
+                }
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! add_vec {
+    ( $type:ident, $byte_len:stmt ) => {
+        paste::item! {
+            impl Add<Vec<$type>> for ByteSet {
+                type Output = ByteSet;
+
+                #[inline(always)]
+                fn add(self, v: Vec<$type>) -> ByteSet {
+                    let mut b = ByteSet::new(self.len() + v.len() * $byte_len, self.endianess);
+                    for i in 0..self.len() {
+                        b.write_u8(self.buffer[i]);
+                    }
+                    for i in 0..v.len() {
+                        b.[<write_ $type>](v[i]);
+                    }
+                    b.set_pos(0);
+                    b
+                }
+            }
+        }
+    };
+}
 
 /// Byte array with fixed size
 pub struct ByteSet {
-    pub position: usize,
+    position: usize,
     pub buffer: Vec<u8>,
+    pub endianess: Endianess,
 }
 
 impl ByteSet {
     #[inline(always)]
-    pub fn new(v: usize) -> ByteSet {
+    pub fn new(v: usize, endianess: Endianess) -> ByteSet {
         ByteSet {
             position: 0,
             buffer: vec![0_u8; v],
+            endianess,
         }
     }
 
-    /** READ UNSIGNED */
-
     #[inline(always)]
-    /// Read 1 unsigned byte
     pub fn read_u8(&mut self) -> u8 {
         self.position += 1;
         self.buffer[self.position - 1]
     }
 
     #[inline(always)]
-    /// Read 2 unsigned byte
-    pub fn read_u16(&mut self) -> u16 {
-        self.read_u8() as u16 * 256 + self.read_u8() as u16
-    }
-
-    #[inline(always)]
-    /// Read 3 unsigned byte
-    pub fn read_u24(&mut self) -> u32 {
-        (self.read_u8() as u32 * 65536) + (self.read_u8() as u32 * 256) + self.read_u8() as u32
-    }
-
-    #[inline(always)]
-    /// Read 4 unsigned byte
-    pub fn read_u32(&mut self) -> u32 {
-        self.read_u16() as u32 * 65536 + self.read_u16() as u32
-    }
-
-    #[inline(always)]
-    /// Read 8 unsigned byte
-    pub fn read_u64(&mut self) -> u64 {
-        (self.read_u32() as u64) * 4294967296 + (self.read_u32() as u64)
-    }
-
-    /** READ SIGNED */
-
-    #[inline(always)]
-    /// Read 1 signed byte
     pub fn read_i8(&mut self) -> i8 {
         self.read_u8() as i8
     }
 
     #[inline(always)]
-    /// Read 2 signed bytes
-    pub fn read_i16(&mut self) -> i16 {
-        self.read_u16() as i16
+    pub fn write_u8(&mut self, v: u8) {
+        self.buffer[self.position] = v;
+        self.position += 1;
     }
 
     #[inline(always)]
-    /// Read 4 signed bytes
-    pub fn read_i32(&mut self) -> i32 {
-        self.read_u32() as i32
+    pub fn write_i8(&mut self, v: i8) {
+        self.write_u8(v as u8);
     }
 
     #[inline(always)]
-    /// Read 8 signed bytes
-    pub fn read_i64(&mut self) -> i64 {
-        self.read_u64() as i64
-    }
-
-    /** READ FLOAT */
-
-    #[inline(always)]
-    /// Read float32 with 4 bytes precision
-    pub fn read_f32(&mut self) -> f32 {
-        f32::from_be_bytes([
-            self.read_u8(),
-            self.read_u8(),
-            self.read_u8(),
-            self.read_u8(),
-        ])
+    pub fn read_u24(&mut self) -> u32 {
+        match self.endianess {
+            Endianess::LE => {
+                (self.read_u8() as u32)
+                    + (self.read_u8() as u32 * 256)
+                    + (self.read_u8() as u32 * 65536)
+            }
+            Endianess::BE => {
+                (self.read_u8() as u32 * 65536)
+                    + (self.read_u8() as u32 * 256)
+                    + self.read_u8() as u32
+            }
+        }
     }
 
     #[inline(always)]
-    /// Read float64 with 8 bytes precision
-    pub fn read_f64(&mut self) -> f64 {
-        f64::from_be_bytes([
-            self.read_u8(),
-            self.read_u8(),
-            self.read_u8(),
-            self.read_u8(),
-            self.read_u8(),
-            self.read_u8(),
-            self.read_u8(),
-            self.read_u8(),
-        ])
+    pub fn write_u24(&mut self, v: u32) {
+        let bytes = match self.endianess {
+            Endianess::LE => v.to_le_bytes(),
+            Endianess::BE => v.to_be_bytes(),
+        };
+        for i in 1..4 {
+            self.write_u8(bytes[i]);
+        }
     }
-
-    /** READ STRING */
 
     #[inline(always)]
     pub fn read_string(&mut self, len: usize) -> String {
@@ -114,129 +201,6 @@ impl ByteSet {
         }
     }
 
-    /** READ ARRAY */
-
-    pub fn read_u8_vec(&mut self, len: usize) -> Vec<u8> {
-        let s = &self.buffer[self.position..(self.position + len)];
-        self.position += len;
-        s.to_vec()
-    }
-
-    pub fn read_u16_vec(&mut self, len: usize) -> Vec<u16> {
-        let mut s = vec![0_u16; len];
-        for i in 0..len {
-            s[i] = self.read_u16();
-        }
-        s
-    }
-
-    pub fn read_u32_vec(&mut self, len: usize) -> Vec<u32> {
-        let mut s = vec![0_u32; len];
-        for i in 0..len {
-            s[i] = self.read_u32();
-        }
-        s
-    }
-
-    pub fn read_u64_vec(&mut self, len: usize) -> Vec<u64> {
-        let mut s = vec![0_u64; len];
-        for i in 0..len {
-            s[i] = self.read_u64();
-        }
-        s
-    }
-
-    /** WRITE UNSIGNED */
-
-    #[inline(always)]
-    /// Write 1 unsigned byte
-    pub fn write_u8(&mut self, v: u8) {
-        self.buffer[self.position] = v;
-        self.position += 1;
-    }
-
-    #[inline(always)]
-    /// Write 2 unsigned bytes
-    pub fn write_u16(&mut self, v: u16) {
-        let bytes = v.to_be_bytes();
-        for i in 0..2 {
-            self.write_u8(bytes[i]);
-        }
-    }
-
-    #[inline(always)]
-    /// Write 3 unsigned bytes
-    pub fn write_u24(&mut self, v: u32) {
-        let bytes = v.to_be_bytes();
-        for i in 1..4 {
-            self.write_u8(bytes[i]);
-        }
-    }
-
-    #[inline(always)]
-    /// Write 4 unsigned bytes
-    pub fn write_u32(&mut self, v: u32) {
-        let bytes = v.to_be_bytes();
-        for i in 0..4 {
-            self.write_u8(bytes[i]);
-        }
-    }
-
-    #[inline(always)]
-    /// Write 8 unsigned bytes
-    pub fn write_u64(&mut self, v: u64) {
-        let bytes = v.to_be_bytes();
-        for i in 0..8 {
-            self.write_u8(bytes[i]);
-        }
-    }
-
-    /** WRITE SIGNED */
-
-    #[inline(always)]
-    /// Write 1 signed byte
-    pub fn write_i8(&mut self, v: i8) {
-        self.write_u8(v as u8);
-    }
-
-    #[inline(always)]
-    /// Write 2 unsigned bytes
-    pub fn write_i16(&mut self, v: u16) {
-        self.write_u16(v as u16);
-    }
-    #[inline(always)]
-    /// Write 4 signed bytes
-    pub fn write_i32(&mut self, v: i32) {
-        self.write_u32(v as u32);
-    }
-
-    #[inline(always)]
-    /// Write 8 nsigned bytes
-    pub fn write_i64(&mut self, v: i64) {
-        self.write_u64(v as u64);
-    }
-
-    /** WRITE FLOAT */
-
-    #[inline(always)]
-    /// Write float32 with 4 byte precision
-    pub fn write_f32(&mut self, v: f32) {
-        let bytes = v.to_be_bytes();
-        for i in 0..4 {
-            self.write_u8(bytes[i]);
-        }
-    }
-
-    #[inline(always)]
-    /// Write float64 with 8 byte precision
-    pub fn write_f64(&mut self, v: f64) {
-        let bytes = v.to_be_bytes();
-        for i in 0..8 {
-            self.write_u8(bytes[i]);
-        }
-    }
-
-    /** WRITE STRING */
     #[inline(always)]
     pub fn write_str(&mut self, v: &str) {
         let bytes = v.as_bytes();
@@ -245,40 +209,70 @@ impl ByteSet {
         }
     }
 
-    /** WRITE ARRAY */
-
     #[inline(always)]
-    pub fn write_u8_vec(&mut self, v: Vec<u8>) {
-        for i in 0..v.len() {
-            self.write_u8(v[i]);
+    pub fn write_string(&mut self, v: &String) {
+        let bytes = v.as_bytes();
+        for i in 0..bytes.len() {
+            self.write_u8(bytes[i]);
         }
     }
 
-    #[inline(always)]
-    pub fn write_u16_vec(&mut self, v: Vec<u16>) {
-        for i in 0..v.len() {
-            self.write_u16(v[i]);
-        }
-    }
+    read_number!(u16, u8, u8);
+    read_number!(i16, u8, u8);
+    read_number!(u32, u8, u8, u8, u8);
+    read_number!(i32, u8, u8, u8, u8);
+    read_number!(u64, u8, u8, u8, u8, u8, u8, u8, u8);
+    read_number!(i64, u8, u8, u8, u8, u8, u8, u8, u8);
+    read_number!(f32, u8, u8, u8, u8);
+    read_number!(f64, u8, u8, u8, u8, u8, u8, u8, u8);
 
-    #[inline(always)]
-    pub fn write_u32_vec(&mut self, v: Vec<u32>) {
-        for i in 0..v.len() {
-            self.write_u32(v[i]);
-        }
-    }
+    write_number!(u16);
+    write_number!(i16);
+    write_number!(u32);
+    write_number!(i32);
+    write_number!(u64);
+    write_number!(i64);
+    write_number!(f32);
+    write_number!(f64);
 
-    #[inline(always)]
-    pub fn write_u64_vec(&mut self, v: Vec<u64>) {
-        for i in 0..v.len() {
-            self.write_u64(v[i]);
-        }
-    }
+    read_vec!(u8);
+    read_vec!(i8);
+    read_vec!(u16);
+    read_vec!(i16);
+    read_vec!(u32);
+    read_vec!(i32);
+    read_vec!(u64);
+    read_vec!(i64);
+    read_vec!(f32);
+    read_vec!(f64);
+
+    write_vec!(u8);
+    write_vec!(i8);
+    write_vec!(u16);
+    write_vec!(i16);
+    write_vec!(u32);
+    write_vec!(i32);
+    write_vec!(u64);
+    write_vec!(i64);
+    write_vec!(f32);
+    write_vec!(f64);
 
     #[inline(always)]
     /// Return buffer length
     pub fn len(&self) -> usize {
         self.buffer.len()
+    }
+
+    #[inline(always)]
+    /// Return buffer length
+    pub fn set_pos(&mut self, p: usize) {
+        self.position = p;
+    }
+
+    #[inline(always)]
+    /// Return buffer length
+    pub fn pos(&self) -> usize {
+        self.position
     }
 
     pub fn print(&self) {
@@ -302,9 +296,115 @@ impl ByteSet {
     }
 }
 
-impl AddAssign<u8> for ByteSet {
+add_assign_number!(u8);
+add_assign_number!(i8);
+add_assign_number!(u16);
+add_assign_number!(i16);
+add_assign_number!(u32);
+add_assign_number!(i32);
+add_assign_number!(u64);
+add_assign_number!(i64);
+add_assign_number!(f32);
+add_assign_number!(f64);
+
+add_assign_vec!(u8);
+add_assign_vec!(i8);
+add_assign_vec!(u16);
+add_assign_vec!(i16);
+add_assign_vec!(u32);
+add_assign_vec!(i32);
+add_assign_vec!(u64);
+add_assign_vec!(i64);
+add_assign_vec!(f32);
+add_assign_vec!(f64);
+
+add_vec!(u8, 1);
+add_vec!(i8, 1);
+add_vec!(u16, 2);
+add_vec!(i16, 2);
+add_vec!(u32, 4);
+add_vec!(i32, 4);
+add_vec!(u64, 8);
+add_vec!(i64, 8);
+add_vec!(f32, 4);
+add_vec!(f64, 8);
+
+// ByteSet += ByteSet
+impl AddAssign<ByteSet> for ByteSet {
     #[inline(always)]
-    fn add_assign(&mut self, v: u8) {
-        self.write_u8(v);
+    fn add_assign(&mut self, v: ByteSet) {
+        for i in 0..v.len() {
+            self.write_u8(v.buffer[i]);
+        }
+    }
+}
+
+// ByteSet += &str
+impl AddAssign<&str> for ByteSet {
+    #[inline(always)]
+    fn add_assign(&mut self, v: &str) {
+        for i in 0..v.len() {
+            self.write_str(v);
+        }
+    }
+}
+
+// ByteSet += String
+impl AddAssign<&String> for ByteSet {
+    #[inline(always)]
+    fn add_assign(&mut self, v: &String) {
+        for i in 0..v.len() {
+            self.write_string(v);
+        }
+    }
+}
+
+// ByteSet + ByteSet = new ByteSet
+impl Add<ByteSet> for ByteSet {
+    type Output = ByteSet;
+
+    #[inline(always)]
+    fn add(self, v: ByteSet) -> ByteSet {
+        let mut b = ByteSet::new(self.len() + v.len(), self.endianess);
+        for i in 0..self.len() {
+            b.write_u8(self.buffer[i]);
+        }
+        for i in 0..v.len() {
+            b.write_u8(v.buffer[i]);
+        }
+        b.set_pos(0);
+        b
+    }
+}
+
+// ByteSet + &str = new ByteSet
+impl Add<&str> for ByteSet {
+    type Output = ByteSet;
+
+    #[inline(always)]
+    fn add(self, v: &str) -> ByteSet {
+        let mut b = ByteSet::new(self.len() + v.len(), self.endianess);
+        for i in 0..self.len() {
+            b.write_u8(self.buffer[i]);
+        }
+        b.write_str(v);
+        b.set_pos(0);
+        b
+    }
+}
+
+// ByteSet + &String = new ByteSet
+impl Add<&String> for ByteSet {
+    type Output = ByteSet;
+
+    #[inline(always)]
+    fn add(self, v: &String) -> ByteSet {
+        let mut b = ByteSet::new(self.len() + v.len(), self.endianess);
+        for i in 0..self.len() {
+            b.write_u8(self.buffer[i]);
+        }
+        b.write_string(v);
+        b.set_pos(0);
+        b
     }
 }
