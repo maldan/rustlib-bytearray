@@ -4,4 +4,5 @@ pub enum Endianess {
     BE,
 }
 
-pub mod byteset;
+mod byteset;
+pub use byteset::ByteSet;

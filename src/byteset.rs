@@ -17,6 +17,20 @@ macro_rules! write_vec {
 }
 
 #[macro_export]
+macro_rules! write_slice {
+    ( $type:ident ) => {
+        paste::item! {
+            #[inline(always)]
+            pub fn [<write_ $type _slice>](&mut self, s: &[$type]) {
+                for i in 0..s.len() {
+                    self.[<write_ $type>](s[i]);
+                }
+            }
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! read_vec {
     ( $type:ident ) => {
         paste::item! {
@@ -142,6 +156,12 @@ impl ByteSet {
         }
     }
 
+    pub fn from(bytes: &[u8], endianess: Endianess) -> ByteSet {
+        let mut b = ByteSet::new(0, endianess);
+        b.buffer = bytes.to_vec();
+        b
+    }
+
     #[inline(always)]
     pub fn read_u8(&mut self) -> u8 {
         self.position += 1;
@@ -257,6 +277,8 @@ impl ByteSet {
     write_vec!(f32);
     write_vec!(f64);
 
+    write_slice!(u8);
+
     #[inline(always)]
     /// Return buffer length
     pub fn len(&self) -> usize {
@@ -343,7 +365,7 @@ impl AddAssign<ByteSet> for ByteSet {
 impl AddAssign<&str> for ByteSet {
     #[inline(always)]
     fn add_assign(&mut self, v: &str) {
-        for i in 0..v.len() {
+        for _i in 0..v.len() {
             self.write_str(v);
         }
     }
@@ -353,7 +375,7 @@ impl AddAssign<&str> for ByteSet {
 impl AddAssign<&String> for ByteSet {
     #[inline(always)]
     fn add_assign(&mut self, v: &String) {
-        for i in 0..v.len() {
+        for _i in 0..v.len() {
             self.write_string(v);
         }
     }
