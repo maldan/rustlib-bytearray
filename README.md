@@ -2,6 +2,7 @@
 
 Library for handy works with bytes and bits.
 
+![Rust test](https://github.com/maldan/rustlib-bytearray/workflows/Rust/badge.svg)
 [![License](https://img.shields.io/github/license/maldan/rustlib-bytearray)](https://github.com/maldan/rustlib-bytearray/blob/main/LICENSE)
 [![hits](https://hits.deltapapa.io/github/maldan/rustlib-bytearray.svg)](https://github.com/maldan/rustlib-bytearray)
 <a href="https://github.com/maldan/rustlib-bytearray/pulse" alt="Activity">
