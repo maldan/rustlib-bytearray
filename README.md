@@ -28,19 +28,19 @@ It's also wrapper for `Vec<u8>` but you can expand it at runtime. It will panic 
 
 ## What Can I Do?
 
-- Write and read any `number`
-- Write and read `string`
-- Write and read `Vec<number>`
-- Work with `LE` and `BE` endians
+-   Write and read any `number`
+-   Write and read `string`
+-   Write and read `Vec<number>`
+-   Work with `LE` and `BE` endians
 
 ## Example
 
-```rs
+```rust
 // Import what you need
 use bytearray::{ByteArray, ByteSet, ByteSlice, Endianess};
 ```
 
-```rs
+```rust
 // Test ByteSet
 let mut b = ByteSet::new(8, Endianess::LE);
 b.write_u64(123456789);
@@ -48,20 +48,20 @@ b.set_pos(0);
 print!("{}", b.read_u64()); // 123456789
 ```
 
-```rs
+```rust
 // Test write panic
 let mut b = ByteSet::new(4, Endianess::LE);
 b.write_u64(123456789); // panic!
 ```
 
-```rs
+```rust
 // Test read panic
 let mut b = ByteSet::new(4, Endianess::LE);
 b.write_u32(1234);
 b.read_u32(); // panic!
 ```
 
-```rs
+```rust
 // Test ByteArray
 let mut b = ByteArray::new(0, Endianess::LE);
 b.write_u64(123456789);
@@ -70,7 +70,7 @@ b.write_u64(123456789);
 println!("{}", b.len()); // 24
 ```
 
-```rs
+```rust
 // Test ByteSlice
 let mut slice = [0u8; 65536];
 let mut b = ByteSlice::new(&mut slice, Endianess::LE);
