@@ -10,8 +10,9 @@ env:
     CARGO_TERM_COLOR: always
 
 jobs:
-    build:
-        runs-on: ${{ matrix.os }} # runs a test on Ubuntu, Windows and macOS
+    test_x86:
+        name: Test x86
+        runs-on: ${{ matrix.os }}
 
         strategy:
             matrix:
@@ -24,5 +25,36 @@ jobs:
             - name: Build
               run: cargo build --verbose
 
-            - name: Run tests
+            - name: Test
               run: cargo test --verbose
+
+    test_other:
+        name: Test Arm
+        runs-on: ubuntu-latest
+
+        strategy:
+            matrix:
+                target:
+                    - armv7-unknown-linux-gnueabihf
+
+        steps:
+            - name: Setup repo
+              uses: actions/checkout@v2
+
+            - uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: stable
+                  target: ${{ matrix.target }}
+                  override: true
+
+            - uses: actions-rs/cargo@v1
+              with:
+                  use-cross: true
+                  command: build
+                  args: --release --target=${{ matrix.target }}
+
+            - uses: actions-rs/cargo@v1
+              with:
+                  use-cross: true
+                  command: test
+                  args: --target=${{ matrix.target }}
