@@ -18,7 +18,7 @@ fn main() {
     }
     println!("{:?}", now.elapsed());*/
 
-    let mut b = ByteArray::new(0, Endianess::LE);
+    /*let mut b = ByteArray::new(0, Endianess::LE);
     b.write_u8(10);
     b.write_u8(10);
     b.write_u8(10);
@@ -27,5 +27,9 @@ fn main() {
     b.write_string("GASON!");
     b.set_pos(4);
     println!("{:?}", b.read_i8_vec(6));
-    b.print();
+    b.print();*/
+
+    // Test oveflow
+    let mut b = ByteSet::new(4, Endianess::LE);
+    b.write_u32(1234);
 }
