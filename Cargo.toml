@@ -2,7 +2,11 @@
 name = "bytearray"
 authors = ["Maldan"]
 edition = "2018"
-version = "0.0.1"
+version = "0.1.0"
 
 [dependencies]
 paste = "0.1"
+
+[[bin]]
+name = "t"
+path = "t.rs"

@@ -26,7 +26,7 @@ mod tests {
 
     #[test]
     fn from() {
-        let mut b = ByteSet::from(&[1u8, 2u8, 3u8], Endianess::LE);
+        let mut b = ByteSet::from_vec(vec![1u8, 2u8, 3u8], Endianess::LE);
         assert_eq!(b.read_u8(), 1u8);
         assert_eq!(b.read_u8(), 2u8);
         assert_eq!(b.read_u8(), 3u8);
