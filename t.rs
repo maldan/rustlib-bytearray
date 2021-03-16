@@ -1,6 +1,4 @@
-use std::fs::write;
-
-use bytearray::{ByteArray, ByteSet, ByteSlice, Endianess};
+use bytearray::{ByteSet, Endianess};
 
 fn main() {
     /*let now = std::time::Instant::now();

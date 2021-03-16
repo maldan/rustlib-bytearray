@@ -32,6 +32,15 @@ impl ByteSet {
     }
 
     #[inline(always)]
+    pub fn from_slice(vec: &[u8], endianess: Endianess) -> ByteSet {
+        ByteSet {
+            position: 0,
+            buffer: vec.to_vec(),
+            endianess,
+        }
+    }
+
+    #[inline(always)]
     pub fn write_u8(&mut self, v: u8) {
         self.buffer[self.position] = v;
         self.position += 1;

@@ -1,6 +1,6 @@
 use crate::{
-    add_assign_number, add_vec, base_info, base_read, base_write, read_number, read_vec,
-    write_number, write_slice, write_vec, Endianess,
+    base_info, base_read, base_write, read_number, read_vec, write_number, write_slice, write_vec,
+    Endianess,
 };
 
 pub struct ByteArray {
